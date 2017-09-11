@@ -8,7 +8,7 @@ Approximate Graphlets Extraction
 Input format: tab separated weighted edgelist (nodes represented with integer ids).
 
 ```
-src			trg			w
+src	trg	w
 node_id0    node_id1	weight
 ```
 
