@@ -106,8 +106,8 @@ class AGraphlet(object):
 
                             x_class = None
                             if self.node_attr:
-                                mkg.node[x]["name"] = self.g.node[x]["name"]
-                                x_class = mkg.node[x]["name"]
+                                mkg.node[n]["name"] = self.g.node[n]["name"]
+                                x_class = mkg.node[n]["name"]
 
                             # Reindex node ids
                             mkg = nx.convert_node_labels_to_integers(mkg, first_label=0)
@@ -158,9 +158,6 @@ class AGraphlet(object):
         for size in rs:
             for nedges in rs[size]:
                 for pattern, instances in rs[size][nedges]:
-                    #nds = [0]
-                    #nds.extend(list(pattern.nodes()))
-                    #pattern.add_star(nds)
                     data = json_graph.node_link_data(pattern)
                     jd = json.dumps(data)
                     f = open("res/pattern-id%s-n%s-e%s-i%s.json" %
@@ -184,6 +181,14 @@ class AGraphlet(object):
         # Compute network backbone
         self.__backbone()
 
+        # Save filtered graph in json
+        data = json_graph.node_link_data(self.g)
+        jd = json.dumps(data)
+        f = open("res/simplified_graph.json", "w")
+        f.write(jd)
+        f.flush()
+        f.close()
+
         # Identify percentile component size (tune approximation)
         psize = int(self.__local_components_size_percentile())
         print("Selected max component size: %s" % psize)
@@ -193,7 +198,7 @@ class AGraphlet(object):
                                                     min_pattern_size=min_pattern_size,
                                                     max_pattern_size=max_pattern_size)
 
-        # Export Patterns
+        # Export Graphlets
         self.__save_patterns(rs)
 
 
