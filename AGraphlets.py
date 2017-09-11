@@ -72,6 +72,8 @@ class AGraphlet(object):
     def __approx_graphlets_identification(self, max_comp_size=20, min_pattern_size=3, max_pattern_size=5):
         size_to_graph = {}
         c = 0
+
+        # cycle over graph nodes
         for n in tqdm.tqdm(self.g, desc="Nodes"):
             eg = nx.ego_graph(self.g, n, center=False)
             c += 1
@@ -88,16 +90,17 @@ class AGraphlet(object):
 
                     # candidate ego nodes subsets for "graphlet" of size x
                     subsets = self.__compute_subsets(comp, x)
+
                     if len(subsets) > 0:
 
-                        for mk in subsets:
+                        for mk in tqdm.tqdm(subsets):
                             ext_mk = list(mk)
                             ext_mk.append(n)
                             nodes = tuple(sorted(ext_mk))
 
                             # Reintroducing ego
                             mkg = nx.subgraph(eg, mk)
-                            nds = [x]
+                            nds = [n]
                             nds.extend(list(mkg.nodes()))
                             mkg.add_star(nds)
 
@@ -107,7 +110,7 @@ class AGraphlet(object):
                                 x_class = mkg.node[x]["name"]
 
                             # Reindex node ids
-                            nx.convert_node_labels_to_integers(mkg, first_label=0)
+                            mkg = nx.convert_node_labels_to_integers(mkg, first_label=0)
                             n_edges = mkg.number_of_edges()
 
                             if x not in size_to_graph:
@@ -118,7 +121,12 @@ class AGraphlet(object):
                                 if n_edges in size_to_graph[x]:
                                     for i in range(0, len(size_to_graph[x][n_edges])):
 
+                                        # subset already seen: avoid isomorphism
+                                        if nodes in size_to_graph[x][n_edges][i][1]:
+                                            continue
+
                                         if x_class is not None:
+                                            # set central node class
                                             if x_class != size_to_graph[x][n_edges][i][1]["xcl"]:
                                                 continue
 
@@ -132,6 +140,7 @@ class AGraphlet(object):
                                         size_to_graph[x][n_edges].append([mkg, {nodes: None, "xcl": x_class}])
                                 else:
                                     size_to_graph[x][n_edges] = [[mkg, {nodes: None, "xcl": x_class}]]
+
         return size_to_graph
 
     def __compare(self, a, b):
