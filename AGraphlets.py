@@ -5,6 +5,7 @@ import backboning
 import os
 import numpy as np
 import json
+import sys
 from networkx.readwrite import json_graph
 
 
@@ -89,7 +90,7 @@ class AGraphlet(object):
                     subsets = self.__compute_subsets(comp, x)
                     if len(subsets) > 0:
 
-                        for mk in tqdm.tqdm(subsets, desc="Subsets"):
+                        for mk in subsets:
                             ext_mk = list(mk)
                             ext_mk.append(n)
                             nodes = tuple(sorted(ext_mk))
@@ -100,20 +101,27 @@ class AGraphlet(object):
                             nds.extend(list(mkg.nodes()))
                             mkg.add_star(nds)
 
+                            x_class = None
                             if self.node_attr:
                                 mkg.node[x]["name"] = self.g.node[x]["name"]
+                                x_class = mkg.node[x]["name"]
 
                             # Reindex node ids
                             nx.convert_node_labels_to_integers(mkg, first_label=0)
                             n_edges = mkg.number_of_edges()
 
                             if x not in size_to_graph:
-                                size_to_graph[x] = {n_edges: [[mkg, {nodes: None}]]}
+                                size_to_graph[x] = {n_edges: [[mkg, {nodes: None, "xcl": x_class}]]}
                             else:
                                 # Check if already present
                                 isomorphic = False
                                 if n_edges in size_to_graph[x]:
                                     for i in range(0, len(size_to_graph[x][n_edges])):
+
+                                        if x_class is not None:
+                                            if x_class != size_to_graph[x][n_edges][i][1]["xcl"]:
+                                                continue
+
                                         graphlet, count = size_to_graph[x][n_edges][i]
                                         if nx.is_isomorphic(graphlet, mkg, node_match=self.__compare):
                                             isomorphic = True
@@ -121,9 +129,9 @@ class AGraphlet(object):
                                             break
 
                                     if not isomorphic:
-                                        size_to_graph[x][n_edges].append([mkg, {nodes: None}])
+                                        size_to_graph[x][n_edges].append([mkg, {nodes: None, "xcl": x_class}])
                                 else:
-                                    size_to_graph[x][n_edges] = [[mkg, {nodes: None}]]
+                                    size_to_graph[x][n_edges] = [[mkg, {nodes: None, "xcl": x_class}]]
         return size_to_graph
 
     def __compare(self, a, b):
@@ -179,6 +187,30 @@ class AGraphlet(object):
         # Export Patterns
         self.__save_patterns(rs)
 
-#ag = AGraphlet("n.ncol", approx_percentile=70)
-ag = AGraphlet("n.ncol", node_attr="nm.csv", approx_percentile=70)
-ag.execute(min_pattern_size=5, max_pattern_size=5)
+
+if __name__ == "__main__":
+    import argparse
+
+    sys.stdout.write("-------------------------------------\n")
+    sys.stdout.write("            {AGraphlet}              \n")
+    sys.stdout.write("   Approximate Graphlet Extraction   \n")
+    sys.stdout.write("-------------------------------------\n")
+    sys.stdout.write("Author: " + __author__ + "\n")
+    sys.stdout.write("Email:  " + __email__ + "\n")
+    sys.stdout.write("------------------------------------\n")
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('network_file', type=str, help='network file (weighted edge list format)')
+    parser.add_argument('percentile', type=int, help='component size percentile', default=70)
+    parser.add_argument('backbone_threshold', type=float, help='backbone filtering threshold', default=0.3)
+    parser.add_argument('min_graphlet_size', type=int, help='minimum graphlet size', default=3)
+    parser.add_argument('max_graphlet_size', type=int, help='max graphlet size', default=5)
+    parser.add_argument('-a', '--node_attr', type=str, help='node attribute file', default=None)
+
+    args = parser.parse_args()
+
+    ag = AGraphlet(args.network_file, node_attr=args.node_attr,
+                   approx_percentile=args.percentile, backbone_threshold=args.backbone_threshold)
+    ag.execute(min_pattern_size=args.min_graphlet_size, max_pattern_size=args.max_graphlet_size)
+
